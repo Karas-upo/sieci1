@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Expert Quiz</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        #quiz-container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            max-width: 750px;
+            width: 100%;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        .stats-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .question-text {
+            font-size: 1.35rem;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            color: #fff;
+        }
+
+        .image-container { text-align: center; margin-bottom: 25px; }
+        .image-container img {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+        }
+
+        .answers { list-style: none; padding: 0; display: grid; gap: 12px; }
+
+        .answer-item {
+            padding: 16px 20px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255,255,255,0.03);
+            font-weight: 500;
+        }
+
+        .answer-item:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .answer-item.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+
+        .answer-item.correct {
+            border-color: var(--success) !important;
+            background: rgba(16, 185, 129, 0.15) !important;
+            color: #34d399;
+        }
+
+        .answer-item.wrong {
+            border-color: var(--danger) !important;
+            background: rgba(239, 68, 68, 0.15) !important;
+            color: #f87171;
+        }
+
+        .controls {
+            margin-top: 35px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
+        button {
+            padding: 14px 28px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #btn-check { background: var(--primary); color: white; }
+        #btn-check:hover { background: var(--primary-hover); }
+
+        #btn-next { background: #475569; color: white; }
+
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            background: var(--border);
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        #score-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .results-screen {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .results-screen h1 { color: var(--success); font-size: 2.5rem; }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div class="header">
+        <span id="progress" class="badge">Pytanie 1 / 76</span>
+        <div class="stats-group">
+            <span id="score-badge" class="badge">Wynik: 0</span>
+            <span class="badge" id="q-type">Jednokrotny wybór</span>
+        </div>
+    </div>
+    <div id="question-box">
+        <div class="question-text" id="q-text">Ładowanie...</div>
+        <div class="image-container" id="q-image"></div>
+        <ul class="answers" id="q-answers"></ul>
+    </div>
+    <div class="controls">
+        <button id="btn-check">Sprawdź odpowiedź</button>
+        <button id="btn-next" style="display:none;">Następne pytanie</button>
+    </div>
+</div>
+
+<script>
+    // [Tu znajduje się Twoja tablica quizData - zachowana bez zmian dla kompatybilności]
+    const quizData = [
+        {
+            text: "Podczas rutynowej kontroli technik odkryl, ze oprogramowanie zainstalowane na komputerze potajemnie zbieralo dane o stronach internetowych, ktore byly odwiedzane przez uzytkownikow komputera. Jaki rodzaj zagrozenia wplywa na ten komputer?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Atak DoS", correct: false },
+                { text: "kradziez tozsamosci", correct: false },
+                { text: "oprogramowanie szpiegujace", correct: true },
+                { text: "atak zero-day", correct: false }
+            ]
+        },
+        {
+            text: "Ktory termin odnosi sie do sieci, ktora zapewnia bezpieczny dostep do biur korporacyjnych przez dostawcow, klientow i wspolpracownikow?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Internet", correct: false },
+                { text: "intranet", correct: false },
+                { text: "ekstranet", correct: true },
+                { text: "rozszerzona siec", correct: false }
+            ]
+        },
+        {
+            text: "Duza korporacja zmodyfikowala swoja siec, aby umozliwic uzytkownikom dostep do zasobow sieciowych z ich osobistych laptopow i smartfonow. Ktory trend sieciowy to opisuje?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "przetwarzanie w chmurze", correct: false },
+                { text: "wspolpraca online", correct: false },
+                { text: "przynies wlasne urzadzenie", correct: true },
+                { text: "wideokonferencje", correct: false }
+            ]
+        },
+        {
+            text: "Co to jest dostawca uslug internetowych (ISP)?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Jest to organ normalizacyjny, ktory opracowuje standardy okablowania i okablowania dla sieci.", correct: false },
+                { text: "Jest to protokol, ktory ustala, w jaki sposob komputery w sieci lokalnej komunikuja sie.", correct: false },
+                { text: "Jest to organizacja, ktora umozliwia osobom fizycznym i firmom laczenie sie z Internetem.", correct: true },
+                { text: "Jest to urzadzenie sieciowe, ktore laczy funkcjonalnosc kilku roznych urzadzen sieciowych w jednym.", correct: false }
+            ]
+        },
+        {
+            text: "Pracownik oddzialu tworzy wycene dla klienta. Aby to dzo ic, pracownik musi uzyskac dostep do poufnych informacji o cenach z wewnetrznych serwerow w Centrali. Do jakiego rodzaju sieci mialby dostep pracownik?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "intranet", correct: true },
+                { text: "Internet", correct: false },
+                { text: "ekstranet", correct: false },
+                { text: "siec lokalna", correct: false }
+            ]
+        },
+        {
+            text: "Ktore stwierdzenie opisuje wykorzystanie technologii sieci powerline?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Nowe \"inteligentne\" okablowanie elektryczne jest uzywane do rozszerzenia istniejacej domowej sieci LAN.", correct: false },
+                { text: "Domowa siec LAN jest instalowana bez uzycia fizycznego okablowania.", correct: false },
+                { text: "Urzadzenie laczy sie z istniejaca domowa siecia LAN za pomoca adaptera i istniejacego gniazdka elektrycznego.", correct: true },
+                { text: "Bezprzewodowe punkty dostepowe wykorzystuja adaptery powerline do dystrybucji danych przez domowa siec LAN.", correct: false }
+            ]
+        },
+        {
+            text: "Technik sieciowy pracuje nad siecia bezprzewodowa w klinice medycznej. Technik przypadkowo ustawia siec bezprzewodowa, aby pacjenci mogli zobaczyc dane dokumentacji medycznej innych pacjentow. Ktora z czterech cech sieci zostala naruszona w tej sytuacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "tolerancja na bledy", correct: false },
+                { text: "skalowalnosc", correct: false },
+                { text: "bezpieczenstwo", correct: true },
+                { text: "Jakosc uslug (QoS)", correct: false },
+                { text: "niezawodnosc", correct: false }
+            ]
+        },
+        {
+            text: "Jakie dwa kryteria sa stosowane, aby pomoc w wyborze nosnika sieciowego sposrod roznych mediow sieciowych? (Wybierz dwa.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "rodzaje danych, ktore musza byc traktowane priorytetowo", correct: false },
+                { text: "koszt urzadzen koncowych wykorzystywanych w sieci", correct: false },
+                { text: "odleglosc, na jaka wybrane medium moze z powodzeniem przenosic sygnal", correct: true },
+                { text: "liczba urzadzen posrednich zainstalowanych w sieci", correct: false },
+                { text: "srodowisko, w ktorym ma byc zainstalowane wybrane medium", correct: true }
+            ]
+        },
+        {
+            text: "Jaki rodzaj ruchu sieciowego wymaga QoS?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "e-mail", correct: false },
+                { text: "zakupy on-line", correct: false },
+                { text: "wideokonferencje", correct: true },
+                { text: "wiki", correct: false }
+            ]
+        },
+        {
+            text: "Uzytkownik wdraza zabezpieczenia w malej sieci biurowej. Ktore dwie czynnosci zapewnilyby minimalne wymagania bezpieczenstwa dla tej sieci? (Wybierz dwa.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "wdrazanie zapory ogniowej", correct: true },
+                { text: "instalowanie sieci bezprzewodowej", correct: false },
+                { text: "instalowanie oprogramowania antywirusowego", correct: true },
+                { text: "wdrozenie systemu wykrywania wlaman", correct: false },
+                { text: "dodanie dedykowanego urzadzenia zapobiegajacego wlamaniom", correct: false }
+            ]
+        },
+        {
+            text: "Hasla moga byc uzywane do ograniczenia dostepu do calosci lub czesci Cisco IOS. Wybierz tryby i interfejsy, ktore mozna chronic haslami. (Wybierz trzy.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "Interfejs VTY", correct: true },
+                { text: "interfejs konsoli", correct: true },
+                { text: "Interfejs Ethernet", correct: false },
+                { text: "rozruch w trybie IOS", correct: false },
+                { text: "uprzywilejowany tryb EXEC", correct: true },
+                { text: "tryb konfiguracji routera", correct: false }
+            ]
+        },
+        {
+            text: "Ktory interfejs umozliwia zdalne zarzadzanie przelacznikiem warstwy 2?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "interfejs AUX", correct: false },
+                { text: "interfejs portu konsoli", correct: false },
+                { text: "przelacznik wirtualny interfejs", correct: true },
+                { text: "pierwszy interfejs portu Ethernet", correct: false }
+            ]
+        },
+        {
+            text: "Jaka funkcje ma nacisniecie klawisza Tab podczas wprowadzania polecenia w IOS?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Aboruje biezace polecenie i wraca do trybu konfiguracji.", correct: false },
+                { text: "Wychodzi z trybu konfiguracji i wraca do trybu EXEC uzytkownika.", correct: false },
+                { text: "Przesuwa kursor na poczatek nastepnej linii.", correct: false },
+                { text: "Uzupelnia reszte czesciowo wpisanego slowa w poleceniu.", correct: true }
+            ]
+        },
+        {
+            text: "Probujac rozwiazac problem z siecia, technik wprowadzil wiele zmian w biezacym pliku konfiguracyjnym routera. Zmiany nie rozwiazaly problemu i nie zostaly zapisane. Jakie dzialania moze podjac technik, aby odrzucic zmiany i pracowac z plikiem w pamieci NVRAM?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Wydaj polecenie przeladowania bez zapisywania uruchomionej konfiguracji.", correct: true },
+                { text: "Usun plik vlan.dat i uruchom ponownie urzadzenie.", correct: false },
+                { text: "Zamknij i ponownie otworz oprogramowanie do emulacji terminala.", correct: false },
+                { text: "Wydaj polecenie copy startup-config running-config.", correct: false }
+            ]
+        },
+        {
+            text: "Administrator uzywa kombinacji klawiszy Ctrl-Shift-6 na przelaczniku po wydaniu polecenia ping. Jaki jest cel uzywania tych nacisniec klawiszy?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "aby ponownie uruchomic proces pingowania", correct: false },
+                { text: "aby przerwac proces ping", correct: true },
+                { text: "aby wyjsc do innego trybu konfiguracji", correct: false },
+                { text: "aby umozliwic uzytkownikowi wykonanie polecenia", correct: false }
+            ]
+        },
+        {
+            text: "Zapoznaj sie z eksponatem. Administrator sieci konfiguruje kontrole dostepu, aby przelaczyc SW1. Jesli administrator uzywa polaczenia konsoli do polaczenia z przelacznikiem, jakie haslo jest potrzebne, aby uzyskac dostep do trybu EXEC uzytkownika?",
+            img: "z18.jpg",
+            multiple: false,
+            answers: [
+                { text: "letmein", correct: false },
+                { text: "sekret", correct: false },
+                { text: "liniaconin", correct: true },
+                { text: "linia", correct: false }
+            ]
+        },
+        {
+            text: "Technik konfiguruje przelacznik za pomoca nastepujacych polecen: (zobacz obrazek). Co konfiguruje technik?",
+            img: "z19.jpg",
+            multiple: false,
+            answers: [
+                { text: "Dostep do Telnetu", correct: false },
+                { text: "SVI", correct: true },
+                { text: "szyfrowanie haslem", correct: false },
+                { text: "fizyczny dostep do switchport", correct: false }
+            ]
+        },
+        {
+            text: "Ktore polecenie lub kombinacja klawiszy pozwala uzytkownikowi powrocic do poprzedniego poziomu w hierarchii polecen?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "koniec (end)", correct: false },
+                { text: "wyjscie (exit)", correct: true },
+                { text: "Ctrl-Z", correct: false },
+                { text: "Ctrl-C", correct: false }
+            ]
+        },
+        {
+            text: "Jakie sa dwie cechy pamieci RAM w urzadzeniu Cisco? (Wybierz dwa.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "Pamiec RAM zapewnia nieulotna pamiec masowa.", correct: false },
+                { text: "Konfiguracja, ktora aktywnie dziala na urzadzeniu, jest przechowywana w pamieci RAM.", correct: true },
+                { text: "Zawartosc pamieci RAM jest tracona podczas cyklu zasilania.", correct: true },
+                { text: "Pamiec RAM jest skladnikiem przelacznikow Cisco, ale nie w routerach Cisco.", correct: false },
+                { text: "Pamiec RAM jest w stanie przechowywac wiele wersji IOS i plikow konfiguracyjnych.", correct: false }
+            ]
+        },
+        {
+            text: "Ktore dwie nazwy hostow sa zgodne z wytycznymi dotyczacymi konwencji nazewnictwa na urzadzeniach Cisco IOS? (Wybierz dwa.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "Branch2!", correct: false },
+                { text: "RM-3-Switch-2A4", correct: true },
+                { text: "Floor(15)", correct: false },
+                { text: "HO Floor 17", correct: false },
+                { text: "SwBranch799", correct: true }
+            ]
+        },
+        {
+            text: "Czym rozni sie SSH od Telnet?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "SSH nawiazuje polaczenia przez siec, podczas gdy Telnet jest dla dostepu poza pasmem.", correct: false },
+                { text: "SSH zapewnia bezpieczenstwo zdalnym sesjom poprzez szyfrowanie wiadomosci i korzystanie z uwierzytelniania uzytkownika. Telnet jest uwazany za niezabezpieczony i wysyla wiadomosci w postaci zwyklego tekstu.", correct: true },
+                { text: "SSH wymaga uzycia programu emulacji terminala PuTTY. Tera Term musi byc uzywany do laczenia sie z urzadzeniami za pomoca Telnet.", correct: false },
+                { text: "SSH musi byc skonfigurowany przez aktywne polaczenie sieciowe, podczas gdy Telnet jest uzywany do laczenia sie z urzadzeniem za pomoca polaczenia konsoli.", correct: false }
+            ]
+        },
+        {
+            text: "Jakie sa trzy cechy SVI? (Wybierz trzy.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "Zostal zaprojektowany jako protokol bezpieczenstwa do ochrony portow przelacznikow.", correct: false },
+                { text: "Nie jest powiazany z zadnym fizycznym interfejsem na przelaczniku.", correct: true },
+                { text: "Jest to specjalny interfejs, ktory umozliwia lacznosc roznych typow mediow.", correct: false },
+                { text: "Wymagane jest umozliwienie polaczenia przez dowolne urzadzenie in dowolnej lokalizacji.", correct: false },
+                { text: "Zapewnia sposob zdalnego zarzadzania przelacznikiem.", correct: true },
+                { text: "Domyslnie jest powiazany z VLAN1.", correct: true }
+            ]
+        },
+        {
+            text: "Jakie polecenie sluzy do weryfikacji stanu interfejsow przelacznikow, w tym statusu interfejsow i skonfigurowanego adresu IP?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "konfiguracja ip", correct: false },
+                { text: "ping", correct: false },
+                { text: "Traceroute", correct: false },
+                { text: "pokaz krotki interfejs ip", correct: true }
+            ]
+        },
+        {
+            text: "W poleceniu show running-config, ktora czesc skladni jest reprezentowana przez running-config?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "polecenie", correct: false },
+                { text: "slowo kluczowe", correct: true },
+                { text: "zmienna", correct: false },
+                { text: "podpowiedz", correct: false }
+            ]
+        },
+        {
+            text: "Po wprowadzeniu zmian w konfiguracji na przelaczniku Cisco administrator sieci wydaje polecenie copy running-config startup-config. Jaki jest wynik wydania tego polecenia?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Nowa konfiguracja bedzie przechowywana w pamieci flash.", correct: false },
+                { text: "Nowa konfiguracja zostanie zaladowana, jesli przelacznik zostanie zrestartowany.", correct: true },
+                { text: "Obecny plik IOS zostanie zastapiony nowo skonfigurowanym plikiem.", correct: false },
+                { text: "Zmiany konfiguracji zostana usuniete, a oryginalna konfiguracja zostanie przywrocona.", correct: false }
+            ]
+        },
+        {
+            text: "Jakie polecenie zapobiegnie wyswietlaniu wszystkich niezaszyfrowanych hasel w postaci zwyklego tekstu w pliku konfiguracyjnym?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "(config)# enable password secret", correct: false },
+                { text: "(config)# enable secret Secret_Password", correct: false },
+                { text: "(config-line)# password secret", correct: false },
+                { text: "(config)# service password-encryption", correct: true },
+                { text: "(config)# enable secret Encrypted_Password", correct: false }
+            ]
+        },
+        {
+            text: "Administrator sieci wprowadza polecenie szyfrowania hasla uslugi w trybie konfiguracji routera. Co osiaga to polecenie?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "To polecenie szyfruje hasla, gdy sa przesylane przez szeregowe lacza WAN.", correct: false },
+                { text: "To polecenie uniemozliwia komus przegladanie biezacych hasel konfiguracyjnych.", correct: true },
+                { text: "To polecenie umozliwia silny algorytm szyfrowania dla polecenia wlacz tajne haslo.", correct: false },
+                { text: "To polecenie automatycznie szyfruje hasla w plikach konfiguracyjnych, ktore sa obecnie przechowywane w pamieci NVRAM.", correct: false },
+                { text: "To polecenie zapewnia ekskluzywne zaszyfrowane haslo dla zewnetrznego personelu serwisowego, ktory jest zobowiazany do konserwacji routera.", correct: false }
+            ]
+        },
+        {
+            text: "Jaka metode moga uzyc dwa komputery, aby upewnic sie, ze pakiety nie zostana upuszczone, poniewaz zbyt wiele danych jest wysylanych zbyt szybko?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "enkapsulacja", correct: false },
+                { text: "kontrola przeplywu", correct: true },
+                { text: "metoda dostepu", correct: false },
+                { text: "limit czasu odpowiedzi", correct: false }
+            ]
+        },
+        {
+            text: "Ktore stwierdzenie dokladnie opisuje proces enkapsulacji TCP/IP, gdy komputer wysyla dane do sieci?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Dane sa wysylane z warstwy internetowej do warstwy dostepu do sieci.", correct: false },
+                { text: "Pakiety sa wysylane z warstwy dostepu do sieci do warstwy transportowej.", correct: false },
+                { text: "Segmenty sa wysylane z warstwy transportowej do warstwy internetowej.", correct: true },
+                { text: "Frames are sent from the network access layer to the internet layer.", correct: false }
+            ]
+        },
+        {
+            text: "Jakie trzy protokoly warstwy aplikacji sa czescia pakietu protokolow TCP/IP? (Wybierz trzy.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "ARP", correct: false },
+                { text: "DHCP", correct: true },
+                { text: "DNS", correct: true },
+                { text: "FTP", correct: true },
+                { text: "NAT", correct: false },
+                { text: "PPP", correct: false }
+            ]
+        },
+        {
+            text: "Ktora nazwa jest przypisana do PDU warstwy transportowej?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "kawalki", correct: false },
+                { text: "dane", correct: false },
+                { text: "ramka", correct: false },
+                { text: "paczka", correct: false },
+                { text: "segment", correct: true }
+            ]
+        },
+        {
+            text: "Gdy adresowanie IPv4 jest konfigurowane recznie na serwerze internetowym, ktora wlasciwosc konfiguracji IPv4 identyfikuje czesc sieci i hosta dla adresu IPv4?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Adres serwera DNS", correct: false },
+                { text: "subnet mask", correct: true },
+                { text: "domyslna brama", correct: false },
+                { text: "Adres serwera DHCP", correct: false }
+            ]
+        },
+        {
+            text: "Jaki proces wiaze sie z umieszczeniem jednego PDU wewnatrz innego PDU?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "enkapsulacja", correct: true },
+                { text: "kodowanie", correct: false },
+                { text: "segmentacja", correct: false },
+                { text: "kontrola przeplywu", correct: false }
+            ]
+        },
+        {
+            text: "Ktora warstwa jest odpowiedzialna za kierowanie wiadomosci przez siec internetowa w modelu TCP/IP?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "internet", correct: true },
+                { text: "transport", correct: false },
+                { text: "dostep do sieci", correct: false },
+                { text: "sesja", correct: false }
+            ]
+        },
+        {
+            text: "Ktory format PDU jest uzywany, gdy bity sa odbierane z nosnika sieciowego przez karte sieciowa hosta?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "plik", correct: false },
+                { text: "ramka", correct: true },
+                { text: "packet", correct: false },
+                { text: "segment", correct: false }
+            ]
+        },
+        {
+            text: "Zapoznaj sie z eksponatem. ServerB probuje skontaktowac sie z HostA. Ktore dwa stwierdzenia poprawnie identyfikuja adresowanie, ktore ServerB wygeneruje w tym procesie? (Wybierz dwa.)",
+            img: "z43.jpg",
+            multiple: true,
+            answers: [
+                { text: "ServerB wygeneruje pakiet z docelowym adresem IP RouterB.", correct: false },
+                { text: "ServerB wygeneruje ramke z docelowym adresem MAC SwitchB.", correct: false },
+                { text: "ServerB wygeneruje pakiet z docelowym adresem IP RouterA.", correct: false },
+                { text: "ServerB wygeneruje ramke z docelowym adresem MAC RouterB.", correct: true },
+                { text: "ServerB wygeneruje pakiet z docelowym adresem IP HostA.", correct: true },
+                { text: "ServerB wygeneruje ramke z docelowym adresem MAC RouterA.", correct: false }
+            ]
+        },
+        {
+            text: "Ktora metoda pozwala komputerowi odpowiednio reagowac, gdy zada danych z serwera, a odpowiedz serwera zajmuje zbyt duzo czasu?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "enkapsulacja", correct: false },
+                { text: "kontrola przeplywu", correct: false },
+                { text: "metoda dostepu", correct: false },
+                { text: "limit czasu odpowiedzi", correct: true }
+            ]
+        },
+        {
+            text: "Klient internetowy otrzymuje odpowiedz dla strony internetowej z serwera WWW. Z perspektywy klienta, jaka jest poprawna kolejnosc stosu protokolow, ktory jest uzywany do dekodowania otrzymanej transmisji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Ethernet, IP, TCP, HTTP", correct: true },
+                { text: "HTTP, TCP, IP, Ethernet", correct: false },
+                { text: "Ethernet, TCP, IP, HTTP", correct: false },
+                { text: "HTTP, Ethernet, IP, TCP", correct: false }
+            ]
+        },
+        {
+            text: "Ktore dwie warstwy modelu OSI maja taka sama funkcjonalnosc jak pojedyncza warstwa modelu TCP/IP? (Wybierz dwa.)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "lacze danych", correct: true },
+                { text: "siec", correct: false },
+                { text: "fizyczny", correct: true },
+                { text: "sesja", correct: false },
+                { text: "transport", correct: false }
+            ]
+        },
+        {
+            text: "Na ktorej warstwie modelu OSI zostalby dodany adres logiczny podczas enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa fizyczna", correct: false },
+                { text: "warstwa lacza danych", correct: false },
+                { text: "warstwa sieciowa", correct: true },
+                { text: "warstwa transportowa", correct: false }
+            ]
+        },
+        {
+            text: "Jaka jest cecha wiadomosci multiemisji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Sa one wysylane do wybranej grupy gospodarzy.", correct: true },
+                { text: "Sa one wysylane do wszystkich hostow in sieci.", correct: false },
+                { text: "Musza zostac uznane.", correct: false },
+                { text: "Sa wysylani do jednego miejsca docelowego.", correct: false }
+            ]
+        },
+        {
+            text: "Ktore stwierdzenie dotyczace protokolow sieciowych jest poprawne?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Protokoly sieciowe okreslaja rodzaj uzywanego sprzetu i sposob jego montazu w szafach.", correct: false },
+                { text: "Okreslaja one, w jaki sposob wiadomosci sa wymieniane miedzy zrodlem a miejscem docelowym.", correct: true },
+                { text: "Wszystkie one dzialaja w warstwie dostepu do sieci TCP/IP.", correct: false },
+                { text: "Sa one wymagane tylko do wymiany wiadomosci miedzy urzadzeniami w sieciach zdalnych.", correct: false }
+            ]
+        },
+        {
+            text: "Jaka jest zaleta urzadzen sieciowych korzystajacych z otwartych standardowych protokolow?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Komunikacja sieciowa ogranicza sie do transferu danych miedzy urzadzeniami od tego samego dostawcy.", correct: false },
+                { text: "Host klienta i serwer z roznymi systemami operacyjnymi moga z powodzeniem wymieniac dane.", correct: true },
+                { text: "Dostep do Internetu moze byc kontrolowany przez jednego dostawce uslug internetowych na kazdym rynku.", correct: false },
+                { text: "Konkurencja i innowacyjnosc sa ograniczone do okreslonych rodzajow produktow.", correct: false }
+            ]
+        },
+        {
+            text: "Ktore urzadzenie pelni funkcje okreslania sciezki, ktora wiadomosci powinny przejsc przez internetworks?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "router", correct: true },
+                { text: "zapora ogniowa", correct: false },
+                { text: "serwer internetowy", correct: false },
+                { text: "modem DSL", correct: false }
+            ]
+        },
+        {
+            text: "Otworz cwiczenie PT. Wykonaj zadania w instrukcjach cwiczenia, a nastepnie odpowiedz na pytanie. Jaki jest adres IP wirtualnego interfejsu przelacznika (SVI) na Switch0?",
+            img: "z52.jpg",
+            multiple: false,
+            answers: [
+                { text: "192.168.5.10", correct: true },
+                { text: "192.168.10.5", correct: false },
+                { text: "192.168.10.1", correct: false },
+                { text: "192.168.5.0", correct: false }
+            ]
+        },
+        {
+            text: "Dlaczego przelacznik warstwy 2 mialby potrzebowac adresu IP?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "aby wlaczyc przelacznik wysylania ramek nadawczych do podlaczonych komputerow", correct: false },
+                { text: "aby umozliwic przelacznikowi dzialanie jako domyslna brama", correct: false },
+                { text: "aby umozliwic zdalne zarzadzanie przelacznikiem", correct: true },
+                { text: "aby umozliwic przelacznikowi odbieranie ramek z podlaczonych komputerow", correct: false }
+            ]
+        },
+        {
+            text: "Zapoznaj sie z eksponatem. Administrator probuje skonfigurowac przelacznik, ale otrzymuje komunikat o bledzie wyswietlany na eksponacie. Jaki jest problem?",
+            img: "z54.jpg",
+            multiple: false,
+            answers: [
+                { text: "Nalezy uzyc calego polecenia, configure terminal.", correct: false },
+                { text: "Administrator jest juz w trybie konfiguracji globalnej.", correct: false },
+                { text: "Administrator musi najpierw wejsc w uprzywilejowany tryb EXEC przed wydaniem polecenia.", correct: true },
+                { text: "Administrator musi polaczyc sie przez port konsoli, aby uzyskac dostep do trybu konfiguracji globalnej.", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje siec nalezaca do jednej organizacji, ktora zapewnia bezpieczny dostep osobom, ktore pracuja dla innej organizacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "ekstranet", correct: true },
+                { text: "chmura", correct: false },
+                { text: "BYOD", correct: false },
+                { text: "jakosc uslug", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje przechowywanie plikow osobistych na serwerach przez Internet, aby zapewnic dostep w dowolnym miejscu, w dowolnym czasie i na dowolnym urzadzeniu?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "chmura", correct: true },
+                { text: "BYOD", correct: false },
+                { text: "jakosc uslug", correct: false },
+                { text: "siec konwergentna", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje siec, w ktorej jeden komputer moze byc zarowno klientem, jak i serwerem?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "peer-to-peer", correct: true },
+                { text: "chmura", correct: false },
+                { text: "BYOD", correct: false },
+                { text: "jakosc uslug", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje rodzaj sieci uzywanej przez osoby, ktore pracuja z domu lub z malego zdalnego biura?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Siec SOHO", correct: true },
+                { text: "BYOD", correct: false },
+                { text: "jakosc uslug", correct: false },
+                { text: "siec konwergentna", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje model obliczeniowy, w ktorym oprogramowanie serwerowe dziala na dedykowanych komputerach?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "klient/serwer", correct: true },
+                { text: "internet", correct: false },
+                { text: "intranet", correct: false },
+                { text: "ekstranet", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje technologie, ktora umozliwia urzadzeniom laczenie sie z siecia LAN za pomoca gniazdka elektrycznego?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "siec energetyczna", correct: true },
+                { text: "internet", correct: false },
+                { text: "intranet", correct: false },
+                { text: "ekstranet", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje polityke, ktora pozwala urzadzeniom sieciowym zarzadzac przeplywem danych, aby nadac pierwszenstwo glosowi i wideo?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "jakosc uslug", correct: true },
+                { text: "internet", correct: false },
+                { text: "intranet", correct: false },
+                { text: "ekstranet", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje prywatna kolekcje sieci LAN i WAN, ktora nalezy do organizacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "intranet", correct: true },
+                { text: "internet", correct: false },
+                { text: "ekstranet", correct: false },
+                { text: "peer-to-peer", correct: false }
+            ]
+        },
+        {
+            text: "Jaki termin opisuje mozliwosc korzystania z urzadzen osobistych w sieci biznesowej lub kampusowej?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "BYOD", correct: true },
+                { text: "internet", correct: false },
+                { text: "intranet", correct: false },
+                { text: "ekstranet", correct: false }
+            ]
+        },
+        {
+            text: "Na ktorej warstwie OSI jest zrodlowy adres IP dodawany do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa sieciowa", correct: true },
+                { text: "warstwa lacza danych", correct: false },
+                { text: "warstwa transportowa", correct: false },
+                { text: "warstwa aplikacji", correct: false }
+            ]
+        },
+        {
+            text: "W ktorej warstwie OSI numer portu docelowego jest dodawany do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa transportowa", correct: true },
+                { text: "warstwa lacza danych", correct: false },
+                { text: "warstwa sieciowa", correct: false },
+                { text: "warstwa aplikacji", correct: false }
+            ]
+        },
+        {
+            text: "W ktorej warstwie OSI dane sa dodawane do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa aplikacji", correct: true },
+                { text: "warstwa lacza danych", correct: false },
+                { text: "warstwa sieciowa", correct: false },
+                { text: "warstwa transportowa", correct: false }
+            ]
+        },
+        {
+            text: "Na ktorej warstwie OSI jest zrodlowy adres IP dodawany do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa sieciowa", correct: true },
+                { text: "warstwa lacza danych", correct: false },
+                { text: "warstwa aplikacji", correct: false },
+                { text: "warstwa prezentacji", correct: false }
+            ]
+        },
+        {
+            text: "Ktora z ponizszych jest nazwa wszystkich komputerow podlaczonych do sieci, ktore uczestnicza bezposrednio w komunikacji sieciowej?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Serwery", correct: false },
+                { text: "Urzadzenie posredniczace", correct: false },
+                { text: "Gospodarz", correct: true },
+                { text: "media", correct: false }
+            ]
+        },
+        {
+            text: "Na ktorej warstwie OSI jest docelowy adres IP dodawany do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa sieciowa", correct: true },
+                { text: "warstwa aplikacji", correct: false },
+                { text: "warstwa transportowa", correct: false },
+                { text: "warstwa prezentacji", correct: false }
+            ]
+        },
+        {
+            text: "W ktorej warstwie OSI jest zrodlowy adres MAC dodawany do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa lacza danych", correct: true },
+                { text: "warstwa aplikacji", correct: false },
+                { text: "warstwa transportowa", correct: false },
+                { text: "warstwa prezentacji", correct: false }
+            ]
+        },
+        {
+            text: "W ktorej warstwie OSI numer portu zrodlowego jest dodawany do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa transportowa", correct: true },
+                { text: "warstwa aplikacji", correct: false },
+                { text: "warstwa sieciowa", correct: false },
+                { text: "warstwa prezentacji", correct: false },
+                { text: "warstwa lacza danych", correct: false }
+            ]
+        },
+        {
+            text: "Na ktorej warstwie OSI jest docelowy adres MAC dodawany do PDU podczas procesu enkapsulacji?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "warstwa lacza danych", correct: true },
+                { text: "warstwa transportowa", correct: false },
+                { text: "warstwa aplikacji", correct: false },
+                { text: "warstwa sieciowa", correct: false }
+            ]
+        },
+        {
+            text: "Kiedy dane sa kodowane jako impulsy swiatla, jakie nosniki sa uzywane do transmisji danych?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "Bezprzewodowy", correct: false },
+                { text: "Fire optic cable", correct: true },
+                { text: "Kabel miedziany", correct: false }
+            ]
+        },
+        {
+            text: "Ktore dwa urzadzenia sa urzadzeniami posredniczacymi? (Wybierz dwa)",
+            img: null,
+            multiple: true,
+            answers: [
+                { text: "Gospodarz", correct: false },
+                { text: "Router", correct: true },
+                { text: "Przelacznik", correct: true },
+                { text: "Serwery", correct: false }
+            ]
+        },
+        {
+            text: "Uczelnia buduje nowy akademik na swoim kampusie. Pracownicy kopia w ziemi, aby zainstalowac nowa rure wodna do akademika. Pracownik przypadkowo uszkadza kabel swiatlowodowy, ktory laczy dwa istniejace akademiki z centrum danych kampusu. Chociaz kabel zostal odciety, studenci w akademikach doswiadczaja tylko bardzo krotkiej przerwy w uslugach sieciowych. Jaka charakterystyka sieci jest tutaj pokazana?",
+            img: null,
+            multiple: false,
+            answers: [
+                { text: "jakosc uslug (QoS)", correct: false },
+                { text: "skalowalnosc", correct: false },
+                { text: "bezpieczenstwo", correct: false },
+                { text: "tolerancja na bledy", correct: true },
+                { text: "integralnosc", correct: false }
+            ]
+        }
+    ];
+
+    let currentIdx = 0;
+    let selectedIndices = [];
+    let score = 0;
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function initQuiz() {
+        shuffle(quizData);
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const q = quizData[currentIdx];
+        selectedIndices = [];
+        document.getElementById('progress').innerText = `Pytanie ${currentIdx + 1} / ${quizData.length}`;
+        document.getElementById('score-badge').innerText = `Wynik: ${score}`;
+        document.getElementById('q-type').innerText = q.multiple ? "Wielokrotny wybór" : "Jednokrotny wybór";
+        document.getElementById('q-text').innerText = q.text;
+
+        const imgCont = document.getElementById('q-image');
+        imgCont.innerHTML = q.img ? `<img src="${q.img}" alt="Zasób wizualny">` : '';
+
+        const ansList = document.getElementById('q-answers');
+        ansList.innerHTML = '';
+        q.answers.forEach((ans, i) => {
+            const li = document.createElement('li');
+            li.className = 'answer-item';
+            li.innerText = ans.text;
+            li.onclick = () => handleSelect(i, li);
+            ansList.appendChild(li);
+        });
+
+        document.getElementById('btn-check').style.display = 'block';
+        document.getElementById('btn-next').style.display = 'none';
+    }
+
+    function handleSelect(idx, el) {
+        const q = quizData[currentIdx];
+        if (document.getElementById('btn-next').style.display === 'block') return;
+
+        if (!q.multiple) {
+            selectedIndices = [idx];
+            Array.from(el.parentNode.children).forEach(child => child.classList.remove('selected'));
+            el.classList.add('selected');
+        } else {
+            if (selectedIndices.includes(idx)) {
+                selectedIndices = selectedIndices.filter(i => i !== idx);
+                el.classList.remove('selected');
+            } else {
+                selectedIndices.push(idx);
+                el.classList.add('selected');
+            }
+        }
+    }
+
+    document.getElementById('btn-check').onclick = () => {
+        if (selectedIndices.length === 0) return alert("Proszę wybrać odpowiedź!");
+
+        const q = quizData[currentIdx];
+        const items = document.getElementById('q-answers').children;
+
+        // Sprawdzenie czy cała odpowiedź jest poprawna
+        let isPerfectlyCorrect = true;
+
+        q.answers.forEach((ans, i) => {
+            const isSelected = selectedIndices.includes(i);
+            if (ans.correct) {
+                items[i].classList.add('correct');
+                if (!isSelected) isPerfectlyCorrect = false;
+            } else {
+                if (isSelected) {
+                    items[i].classList.add('wrong');
+                    isPerfectlyCorrect = false;
+                }
+            }
+        });
+
+        if (isPerfectlyCorrect) {
+            score++;
+            document.getElementById('score-badge').innerText = `Wynik: ${score}`;
+        }
+
+        document.getElementById('btn-check').style.display = 'none';
+        document.getElementById('btn-next').style.display = 'block';
+    };
+
+    document.getElementById('btn-next').onclick = () => {
+        currentIdx++;
+        if (currentIdx < quizData.length) {
+            showQuestion();
+        } else {
+            const percentage = Math.round((score / quizData.length) * 100);
+            document.getElementById('quiz-container').innerHTML = `
+            <div class="results-screen">
+                <h1>Koniec Quizu!</h1>
+                <p style="font-size: 1.5rem; margin: 20px 0;">Twój ostateczny wynik to:</p>
+                <div style="font-size: 4rem; font-weight: 800; color: var(--primary);">${score} / ${quizData.length}</div>
+                <p style="font-size: 1.2rem; color: var(--text-muted);">${percentage}% poprawnych odpowiedzi</p>
+                <button onclick="location.reload()" style="margin-top: 30px; background: var(--primary);">Zacznij od nowa</button>
+            </div>
+        `;
+        }
+    };
+
+    initQuiz();
+</script>
+</body>
+</html>
